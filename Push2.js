@@ -592,7 +592,8 @@ class ControllerState {
   constructor() {
     // we assume that Koala Push 2 is also loaded, or will be, and so start in 
     // shared known state
-    this.viewMode = ViewMode.koala;
+    //this.viewMode = ViewMode.koala;
+    this.viewMode = ViewMode.session;  
     this.inputMode = InputMode.normal;
     this.stopping = new Set(); // Set<TrackSlotPad>
     this.highlighting = new Set(); // Set<TrackSlotPad>
