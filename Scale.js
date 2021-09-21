@@ -36,6 +36,7 @@ const majorPentatonicIntervals = 'MMAMA';
 const minorPentatonicIntervals = 'AMMAM';
 
 const dorianModeIntervals = "MmMMMmM";
+const mixolydianModeIntervals = "MMmMMmM";
 
 /**
  * A representation of a scale built on a tonic.
@@ -213,15 +214,19 @@ const scale = new Scale('D');
 
 // console.log(scale.interval(minorIntervals).map(n => note2MIDI(n, 5, scale.offset())));
 
-const scaleC = new Scale('C');
+const scaleC = new Scale('C#');
 
-const scaleA = new Scale('A');
+// const scaleA = new Scale('A');
 
-console.log(scaleA.interval(majorPentatonicIntervals));
-console.log(scaleA.interval(minorPentatonicIntervals));
+// // console.log(scaleA.interval(majorPentatonicIntervals));
+// // console.log(scaleA.interval(minorPentatonicIntervals));
 
-const scaleE = new Scale('G');
-console.log(scaleE.interval(dorianModeIntervals));
+
+// const scaleG = new Scale('G');
+// console.log(scaleG.interval(mixolydianModeIntervals));
+
+// const scaleE = new Scale('G');
+// console.log(scaleE.interval(dorianModeIntervals));
 //let notes = scaleC.interval(majorIntervals).map(n => note2MIDI(n, 0, scaleC.offset()));
 
 //console.log(notes)
@@ -230,3 +235,16 @@ console.log(scaleE.interval(dorianModeIntervals));
 const grid = scaleC.inKey(dorianModeIntervals);
 
 console.log(grid)
+
+function note(row, col) {
+    if (row < 5) {
+        return 0;
+    }
+    return 60 + col + (8 * (7 - row));
+}
+
+// console.log(note(7, 0));
+// console.log(note(7, 1));
+// console.log(note(7, 2));
+// console.log(note(7, 3));
+// console.log(note(6, 0));

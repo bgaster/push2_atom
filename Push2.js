@@ -42,11 +42,12 @@ const notes2MIDI = {
 
 const majorIntervals = 'MMmMMMm';
 const minorIntervals = 'MmMMmMM';
+const dorianModeIntervals = "MmMMMmM";
 
 const majorPentatonicIntervals = 'MMAMA';
 const minorPentatonicIntervals = 'AMMAM';
 
-const dorianModeIntervals = "MmMMMmM";
+
 
 /**
  * A representation of a scale built on a tonic.
@@ -56,8 +57,16 @@ class Scale {
    * Constructs a scale instance.
    * @param {String} tonic
    */
-  constructor(tonic) {
+  constructor(tonic, mode) {
     this.tonic = tonic;
+    this.mode = mode;
+
+    this.pads = new Map();
+    this.gridColors = new Array(8).fill(0).map(() => new Array(8).fill(0));
+
+    this.sharp = false;
+    this.tonicToIndex(tonic);
+    this.resetPads();
   }
 
   /**
@@ -73,6 +82,35 @@ class Scale {
       octave = octave + 1;
     }
     return notes2MIDI[note.toUpperCase()] + 12 * octave;
+  }
+
+  getIntervals() {
+    switch (this.mode) {
+      case 0:
+        return majorIntervals;
+      case 1:
+        return minorIntervals;
+      case 2:
+        return dorianModeIntervals;
+    }
+  }
+
+  tonicToIndex(tonic) {
+    const t = tonic[0];
+    if (tonic.length == 2) {
+      this.sharp = true;
+    }
+    this.index = tonic.charCodeAt(0) - 'C'.charCodeAt(0);
+  }
+
+  indexToTonic(index) {
+    const n = String.fromCharCode(index + 'C'.charCodeAt(0));
+
+    if (this.sharp) {
+      return n + "#";
+    }
+
+    return n;
   }
 
   /**
@@ -113,7 +151,9 @@ class Scale {
     return [this.tonic, ...next]
   }
 
-  inKey(intervals) {
+  inKey() {
+    const intervals = this.getIntervals();
+
     let notes = this.interval(intervals).map(n => this.note2MIDI(n, 0, this.offset()));
 
     // grid[row][col]
@@ -198,6 +238,146 @@ class Scale {
       throw new Error("Unidentified step")
     }
   }
+
+  resetPads() {
+    for (var row = 0; row < Layout.rows; row++) {
+      for (var col = 0; col < Layout.cols; col++) {
+        const pad = new RowColPad(row, col);
+        this.pads.set(pad.id, new Style(Color.off, Lighting.static));
+        this.gridColors[row][col] = new Style(Color.off, Lighting.static);
+      }
+    }
+    // in key or chomatic
+    this.inKeyStyle();
+
+    // row 2 is for sharps
+    var pad = new RowColPad(2, 1);
+    this.pads.set(pad.id, new Style(Color.lightYellow, Lighting.static));
+    this.gridColors[2][1] = new Style(Color.lightYellow, Lighting.static);
+    pad = new RowColPad(2, 2);
+    this.pads.set(pad.id, new Style(Color.lightYellow, Lighting.static));
+    this.gridColors[2][2] = new Style(Color.lightYellow, Lighting.static);
+
+    pad = new RowColPad(2, 4);
+    this.pads.set(pad.id, new Style(Color.lightYellow, Lighting.static));
+    this.gridColors[2][4] = new Style(Color.lightYellow, Lighting.static);
+    pad = new RowColPad(2, 5);
+    this.pads.set(pad.id, new Style(Color.lightYellow, Lighting.static));
+    this.gridColors[2][5] = new Style(Color.lightYellow, Lighting.static);
+    pad = new RowColPad(2, 6);
+    this.pads.set(pad.id, new Style(Color.lightYellow, Lighting.static));
+    this.gridColors[2][6] = new Style(Color.lightYellow, Lighting.static);
+
+    // if current tonic is a sharp, then set that pad to highlight it
+    if (this.sharp) {
+      const pad = new RowColPad(2, this.index);
+      this.pads.set(pad.id, new Style(Color.red, Lighting.static));
+      this.gridColors[2][this.index] = new Style(Color.red, Lighting.static);
+    }
+
+    for (var col = 0; col < 7; col++) {
+      const pad = new RowColPad(3, col);
+      if (!this.sharp && col == this.index) {
+        this.pads.set(pad.id, new Style(Color.red, Lighting.static));
+        this.gridColors[3][this.index] = new Style(Color.red, Lighting.static);
+      }
+      else {
+        this.pads.set(pad.id, new Style(Color.blue, Lighting.static));
+        this.gridColors[3][col] = new Style(Color.blue, Lighting.static);
+      }
+    }
+
+    pad = new RowColPad(4, 0);
+    if (this.mode == 0) {
+      this.pads.set(pad.id, new Style(Color.darkGreen, Lighting.static));
+      this.gridColors[4][0] = new Style(Color.darkGreen, Lighting.static);
+    }
+    else {
+      this.pads.set(pad.id, new Style(Color.lightOrange, Lighting.static));
+      this.gridColors[4][0] = new Style(Color.lightOrange, Lighting.static);
+    }
+
+    pad = new RowColPad(4, 1);
+    if (this.mode == 1) {
+      this.pads.set(pad.id, new Style(Color.darkGreen, Lighting.static));
+      this.gridColors[4][1] = new Style(Color.darkGreen, Lighting.static);
+    }
+    else {
+      this.pads.set(pad.id, new Style(Color.lightOrange, Lighting.static));
+      this.gridColors[4][1] = new Style(Color.lightOrange, Lighting.static);
+    }
+
+    pad = new RowColPad(4, 2);
+    if (this.mode == 2) {
+      this.pads.set(pad.id, new Style(Color.darkGreen, Lighting.static));
+      this.gridColors[4][2] = new Style(Color.darkGreen, Lighting.static);
+    }
+    else {
+      this.pads.set(pad.id, new Style(Color.lightOrange, Lighting.static));
+      this.gridColors[4][2] = new Style(Color.lightOrange, Lighting.static);
+    }
+  }
+
+  inKeyStyle() {
+    var pad = new RowColPad(0, 7);
+    this.pads.set(pad.id, new Style(Color.green, Lighting.static));
+    this.gridColors[0][7] = new Style(Color.green, Lighting.static);
+  }
+
+  chromaticStyle() {
+    var pad = new RowColPad(0, 7);
+    this.pads.set(pad.id, new Style(Color.lightRed, Lighting.static));
+    this.gridColors[0][7] = new Style(Color.lightRed, Lighting.static);
+  }
+
+  getStyle(row, col) {
+    return this.gridColors[row][col];
+  }
+
+  press(row, col) {
+    // black keys, select tonic
+    if (row == 2) {
+      switch (col) {
+        case 1:
+          this.sharp = true;
+          this.index = 1;
+          this.tonic = "C#";
+          break;
+        case 2:
+          this.sharp = true;
+          this.index = 2;
+          this.tonic = "D#";
+          break;
+        case 4:
+          this.sharp = true;
+          this.index = 4;
+          this.tonic = "F#";
+          break;
+        case 5:
+          this.sharp = true;
+          this.index = 5;
+          this.tonic = "G#";
+          break;
+        case 6:
+          this.sharp = true;
+          this.index = 6;
+          this.tonic = "A#";
+          break;
+      }
+    }
+    // white keys, select tonic
+    else if (row == 3 && col < 7) {
+      this.sharp = false;
+      this.index = col;
+      this.tonic = String.fromCharCode(col + 'C'.charCodeAt(0));
+    }
+    // select mode
+    else if (row == 4 && col < 3) {
+      this.mode = col;
+    }
+
+    this.resetPads();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -255,8 +435,9 @@ const ViewMode = {
   koala: 1,   // Push being used for Koala control
   aum: 2,     // Push being used for AUM control
   note: 3,    // Push being used as Keyboard into Atom
-  session: 4, // Push being used as clip launcher
-  scale: 5,   // Push being used to set scale for note mode
+  segments: 4, // Push being used as pad player into Atom for Segments
+  session: 5, // Push being used as clip launcher
+  scale: 6,   // Push being used to set scale for note mode
 };
 
 /**
@@ -409,7 +590,9 @@ class ControllerState {
    * Constructs a controller state instance.
    */
   constructor() {
-    this.viewMode = ViewMode.session;
+    // we assume that Koala Push 2 is also loaded, or will be, and so start in 
+    // shared known state
+    this.viewMode = ViewMode.koala;
     this.inputMode = InputMode.normal;
     this.stopping = new Set(); // Set<TrackSlotPad>
     this.highlighting = new Set(); // Set<TrackSlotPad>
@@ -548,17 +731,135 @@ class ViewState {
     this.pads = new Map(); // Map<RowColPad, Style>
   }
 }
+/**
+ * Mapping mode for Elliott Garage's Segments
+ * Currently it is very strightforward, supporting only pads to play slices, with more features to come.
+ * Segments supports only a max of 32 slices so only the bottom 32 pads on the Push are used. 
+ *    - The top 32 pads are switched off
+ *    - 4x4 bottom left pads are mapped to the first 16 slices (yellow)
+ *    - 4x4 bottom right pads are mapped to 2nd 16 slices (orange)
+ */
+class Segments {
+  constructor() {
+    this.pads = new Map();
+    this.gridColors = new Array(8).fill(0).map(() => new Array(8).fill(0));
+  }
+
+  /**
+   * Compute note for pad 
+   * @param {Number} row
+   * @param {Number} col
+   * @return {Number}
+   */
+  note(row, col) {
+    if (row < 4) {
+      return 0;
+    }
+
+    if (col < 4) {
+      return 60 + col + (4 * (7 - row));
+    }
+    else {
+      return 68 + col + (4 * (7 - row));
+    }
+  }
+
+  resetPads() {
+    for (var row = 0; row < Layout.rows; row++) {
+      for (var col = 0; col < Layout.cols; col++) {
+        const pad = new RowColPad(row, col);
+        if (row < 4) {
+          this.pads.set(pad.id, new Style(Color.off, Lighting.static));
+          this.gridColors[row][col] = new Style(Color.off, Lighting.static);
+        }
+        else {
+          if (col < 4) {
+            this.pads.set(pad.id, new Style(Color.lightYellow, Lighting.static));
+            this.gridColors[row][col] = new Style(Color.lightYellow, Lighting.static);
+          }
+          else {
+            this.pads.set(pad.id, new Style(Color.orange, Lighting.static));
+            this.gridColors[row][col] = new Style(Color.orange, Lighting.static);
+          }
+        }
+      }
+    }
+  }
+
+  getColor(row, col) {
+    return this.gridColors[row][col];
+  }
+
+  pressed(row, col) {
+    return (new Style(Color.green, Lighting.static));
+  }
+
+  unPressed(row, col) {
+    if (col < 4) {
+      return (new Style(Color.lightYellow, Lighting.static));
+    }
+    else {
+      return (new Style(Color.orange, Lighting.static));
+    }
+  }
+
+  clearPads() {
+    this.pads.clear();
+  }
+
+  getPads() {
+    return this.pads;
+  }
+
+  getStyle(row, col) {
+    return this.gridColors[row][col];
+  }
+
+  /**
+   * Find notes that match a given note and pairs with a style
+   * @param {Number} row
+   * @param {Number} col
+   * @param {Style} style
+   */
+  press(row, col, style) {
+    this.gridColors[row][col] = style;
+  }
+
+  release(row, col, timestamp) {
+    const pad = new RowColPad(row, col);
+    const entry = this.pressedI.get(pad.id);
+    //this.pressedI.set(pad.id, new TimestampStyle(timestamp, this.unPressed()));
+    if (entry != undefined) {
+      //console.log(`${entry.timestamp} - ${timestamp}`);
+      if (entry.timestamp <= timestamp) {
+        this.pressedI.set(pad.id, new TimestampStyle(timestamp, this.unPressed(row, col)));
+      }
+    }
+    else {
+      this.pressedI.set(pad.id, new TimestampStyle(timestamp, this.unPressed(row, col)));
+    }
+    //this.pressedI.delete(pad.id);
+  }
+}
 
 class InKey {
   constructor(tonic, mode) {
-    this.scale = new Scale(tonic);
-    this.grid = this.scale.inKey(mode);
+    this.scale = new Scale(tonic, mode);
+    this.grid = this.scale.inKey();
     this.octave = 0;
     this.pads = new Map();
     this.gridColors = new Array(8).fill(0).map(() => new Array(8).fill(0));
     this.resetPads();
 
     this.pressedI = new Map(); // Map<RowColPad, Timestamp>
+  }
+
+  refresh() {
+    this.grid = this.scale.inKey();
+    this.octave = 0;
+    this.pads = new Map();
+    this.gridColors = new Array(8).fill(0).map(() => new Array(8).fill(0));
+    this.resetPads();
   }
 
   changeScale(tonic) {
@@ -725,7 +1026,9 @@ class Push2 {
     this.controllerState = new ControllerState();
     this.isFirstConnection = true;
 
-    this.inKey = new InKey('C', dorianModeIntervals);
+    // this.inKey = new InKey('C', dorianModeIntervals);
+    this.inKey = new InKey('C', 0);
+    this.segments = new Segments();
   }
 
   // Custom device callbacks
@@ -753,9 +1056,27 @@ class Push2 {
    * Invoked when a Session button pressed specifying that the device has
    * entered the session layout.
    */
-  didSwitchToSessionLayout() {
+  didSwitchToSessionLayout(clear) {
     this.controllerState.viewMode = ViewMode.session;
+    this.didSwitchLayout(clear);
+  }
+
+  /**
+   * Invoked when a Koala button pressed specifying that the device has
+   * entered the Koala mode.
+   */
+  didSwitchToKoalaLayout() {
+    this.controllerState.viewMode = ViewMode.koala;
     this.didSwitchLayout();
+  }
+
+  /**
+   * Invoked when a Scale button pressed specifying that the device has
+   * entered the scale layout.
+   */
+  didSwitchToScaleLayout(clear) {
+    this.controllerState.viewMode = ViewMode.scale;
+    this.didSwitchLayout(clear);
   }
 
   /**
@@ -764,6 +1085,15 @@ class Push2 {
    */
   didSwitchToNoteLayout() {
     this.controllerState.viewMode = ViewMode.note;
+    this.didSwitchLayout();
+  }
+
+  /**
+   * Invoked when a Note button was received specifying that the device has
+   * entered the note layout.
+   */
+  didSwitchToSegmentsLayout() {
+    this.controllerState.viewMode = ViewMode.segments;
     this.didSwitchLayout();
   }
 
@@ -781,8 +1111,8 @@ class Push2 {
      * specifying that we are to switch layout (such as from 
      * 'session' to 'note' or vice-versa).
      */
-  didSwitchLayout() {
-    this.render();
+  didSwitchLayout(clear) {
+    this.render(clear);
   }
 
   /**
@@ -807,6 +1137,8 @@ class Push2 {
     const isKoalaView = viewMode == ViewMode.koala;
     const isAUMView = viewMode == ViewMode.aum;
     const isNoteView = viewMode == ViewMode.note;
+    const isScaleView = viewMode == ViewMode.scale;
+    const isSegmentsView = viewMode == ViewMode.segments;
     const isSessionView = viewMode == ViewMode.session;
     const isRecordInputMode = inputMode == InputMode.record;
     const isNormalInputMode = inputMode == InputMode.normal;
@@ -830,6 +1162,28 @@ class Push2 {
       //console.log(`note on: ${note} - ${timestamp}`);
       //this.inKey.press(row, col, timestamp);
       this.inKey.press(row, col, this.inKey.pressed(row, col));
+      this.render();
+      return;
+    }
+
+    if (isSegmentsView) {
+      // top 32 pads are not currently used in this mode
+      if (row < 4) {
+        return;
+      }
+
+      const note = this.segments.note(row, col);
+      atom.receiveNoteOn(note, velocity, channel, timestamp);
+      //console.log(`note on: ${note}`);
+      //console.log(`note on: ${note} - ${timestamp}`);
+      //this.inKey.press(row, col, timestamp);
+      this.segments.press(row, col, this.segments.pressed(row, col));
+      this.render();
+      return;
+    }
+
+    if (isScaleView) {
+      this.inKey.scale.press(row, col);
       this.render();
       return;
     }
@@ -920,6 +1274,7 @@ class Push2 {
     const isKoalaView = viewMode == ViewMode.koala;
     const isAUMView = viewMode == ViewMode.aum;
     const isNoteView = viewMode == ViewMode.note;
+    const isSegmentsView = viewMode == ViewMode.segments;
     const isSessionView = viewMode == ViewMode.session;
     const isNormalInputMode = inputMode == InputMode.normal;
     const isBottomRow = row == Layout.rows - 1;
@@ -938,6 +1293,19 @@ class Push2 {
       //console.log(`note off: ${note} - ${timestamp}`);
       //this.inKey.release(row, col, timestamp);
       this.inKey.press(row, col, this.inKey.unPressed(row, col));
+      this.render();
+      return;
+    }
+
+    if (isSegmentsView) {
+      if (row < 4) {
+        return;
+      }
+      const note = this.segments.note(row, col);
+      atom.receiveNoteOff(note, velocity, channel, timestamp);
+      //console.log(`note off: ${note} - ${timestamp}`);
+      //this.inKey.release(row, col, timestamp);
+      this.segments.press(row, col, this.segments.unPressed(row, col));
       this.render();
       return;
     }
@@ -1015,18 +1383,62 @@ class Push2 {
 
     const isSessionView = viewMode == ViewMode.session;
     const isNoteView = viewMode == ViewMode.note;
+    const isKoalaView = viewMode == ViewMode.koala;
+    const isSegmentsView = viewMode == ViewMode.segments;
+    const isScaleView = viewMode == ViewMode.scale;
     const isStopInputMode = inputMode == InputMode.stop;
     const isSoloInputMode = inputMode == InputMode.solo;
     const isMuteInputMode = inputMode == InputMode.mute;
     const isRecordInputMode = inputMode == InputMode.record;
 
-    if (button == ButtonPads.NOTE) {
+    // CHECKME: not 100% sure if this is always the right thing to do
+    if (value == 0) {
+      return;
+    }
+
+    if (isKoalaView) {
+      // switch out of Koala view
+      if (button == ButtonPads.ABOVE_PAD2) {
+        this.didSwitchToSessionLayout(true);
+      }
+      return;
+    }
+
+    // switch to AUM mode
+    if (button == ButtonPads.ABOVE_PAD1) {
+      // pad updates will now be handled by Koala Push 2 app
+      this.didSwitchToKoalaLayout();
+      return;
+    }
+
+    if (button == ButtonPads.SCALE) {
+      this.didSwitchToScaleLayout(true);
+      return;
+    }
+
+    if (button == ButtonPads.NOTE && (isSessionView || isSegmentsView || isScaleView)) {
+      if (isScaleView) {
+        this.inKey.refresh();
+      }
       this.inKey.resetPads();
       this.didSwitchToNoteLayout();
       return;
     }
 
+    if (button == ButtonPads.NOTE && isNoteView) {
+      if (isScaleView) {
+        this.inKey.refresh();
+      }
+
+      this.segments.resetPads();
+      this.didSwitchToSegmentsLayout();
+      return;
+    }
+
     if (button == ButtonPads.SESSION) {
+      if (isScaleView) {
+        this.inKey.refresh();
+      }
       this.didSwitchToSessionLayout();
       return;
     }
@@ -1252,6 +1664,59 @@ class Push2 {
     }
   }
 
+  /**
+   * Invoked on any polyphonic aftertouch message.
+   * @param {Number} pitch
+   * @param {Number} pressure
+   * @param {Number} channel
+   * @param {Number} timestamp
+   */
+  didPolyphonicAftertouch(pitch, pressure, channel, timestamp) {
+    const { viewMode } = this.controllerState;
+
+    const isNoteView = viewMode == ViewMode.note;
+
+    if (isNoteView) {
+      atom.receivePolyphonicAftertouch(pitch, pressure, channel, timestamp);
+      return;
+    }
+  }
+
+  /**
+   * Invoked on any channel aftertouch message.
+   * @param {Number} pressure
+   * @param {Number} channel
+   * @param {Number} timestamp
+   */
+  didChannelAftertouch(pressure, channel, timestamp) {
+    const { viewMode } = this.controllerState;
+
+    const isNoteView = viewMode == ViewMode.note;
+
+    if (isNoteView) {
+      atom.receiveChannelAftertouch(pressure, channel, timestamp);
+      return;
+    }
+  }
+
+  /**
+   * Invoked on any polyphonic aftertouch message.
+   * @param {Number} pitch
+   * @param {Number} pressure
+   * @param {Number} channel
+   * @param {Number} timestamp
+   */
+  didPitchbend(value, channel, timestamp) {
+    const { viewMode } = this.controllerState;
+
+    const isNoteView = viewMode == ViewMode.note;
+
+    if (isNoteView) {
+      atom.receivePitchBend(value, channel, timestamp);
+      return;
+    }
+  }
+
   // Custom lifecycle callbacks
 
   /**
@@ -1288,11 +1753,23 @@ class Push2 {
 
     const isSessionView = viewMode == ViewMode.session;
     const isNoteView = viewMode == ViewMode.note;
+    const isKoalaView = viewMode == ViewMode.koala;
+    const isSegmentsView = viewMode == ViewMode.segments;
+    const isScaleView = viewMode == ViewMode.scale;
 
     const isMomentaryClearInputMode = momentaryInputMode == MomentaryInputMode.clear;
     const isMomentaryDuplicateInputMode = momentaryInputMode == MomentaryInputMode.duplicate;
     const isMomentaryQuantizeInputMode = momentaryInputMode == MomentaryInputMode.quantize;
     const isWaiting = isMomentaryClearInputMode || isMomentaryDuplicateInputMode || isMomentaryQuantizeInputMode;
+
+    if (isKoalaView) {
+      nextState.buttons.set(ButtonPads.ABOVE_PAD1, new Style(Color.blue));
+      nextState.buttons.set(ButtonPads.ABOVE_PAD2, new Style(Color.white));
+    }
+    else {
+      nextState.buttons.set(ButtonPads.ABOVE_PAD1, new Style(Color.white));
+      nextState.buttons.set(ButtonPads.ABOVE_PAD2, new Style(Color.blue));
+    }
 
     if (isNoteView) {
       // for (const [id, style] of this.inKey.getPads()) {
@@ -1313,6 +1790,26 @@ class Push2 {
       //   nextState.pads.set(pad.id, style);
       // }
 
+    }
+    else if (isSegmentsView) {
+      for (var r = 0; r < 8; r++) {
+        for (var c = 0; c < 8; c++) {
+          //const style = this.inKey.getColor(r, c);
+          const pad = new RowColPad(r, c);
+          const style = this.segments.getStyle(r, c);
+          nextState.pads.set(pad.id, style);
+        }
+      }
+    }
+    else if (isScaleView) {
+      for (var r = 0; r < 8; r++) {
+        for (var c = 0; c < 8; c++) {
+          //const style = this.inKey.getColor(r, c);
+          const pad = new RowColPad(r, c);
+          const style = this.inKey.scale.getStyle(r, c);
+          nextState.pads.set(pad.id, style);
+        }
+      }
     }
     else if (isSessionView) {
       // for (const clip of atom.getAllFocusedClips()) {
@@ -1820,6 +2317,9 @@ class Push2 {
       ...controller.setButtonMessage(ButtonPads.DUPLICATE, Color.lightGray),
       ...controller.setButtonMessage(ButtonPads.QUANTIZE, Color.lightGray),
       ...controller.setButtonMessage(ButtonPads.SHIFT, Color.lightGray),
+
+      ...controller.setButtonMessage(ButtonPads.ABOVE_PAD1, Color.blue),
+      ...controller.setButtonMessage(ButtonPads.ABOVE_PAD2, Color.lightGray),
     ]
   }
 
@@ -2006,9 +2506,10 @@ function onCc(cc, value, channel, timestamp) {
  * @param {Number} pressure
  * @param {Number} channel
  * @param {Number} timestamp
+ * @param {String} port
  */
-function onPolyphonicAftertouch(pitch, pressure, channel, timestamp) {
-  // TODO
+function onPolyphonicAftertouch(pitch, pressure, channel, timestamp, port) {
+  controller.didPolyphonicAftertouch(pitch, pressure, channel, timestamp);
 }
 
 /**
@@ -2016,9 +2517,10 @@ function onPolyphonicAftertouch(pitch, pressure, channel, timestamp) {
  * @param {Number} pressure
  * @param {Number} channel
  * @param {Number} timestamp
+ * @param {String} port
  */
-function onChannelAftertouch(pressure, channel, timestamp) {
-  // TODO
+function onChannelAftertouch(pressure, channel, timestamp, port) {
+  controller.didChannelAftertouch(pressure, channel, timestamp);
 }
 
 /**
@@ -2028,7 +2530,7 @@ function onChannelAftertouch(pressure, channel, timestamp) {
  * @param {Number} timestamp
  */
 function onPitchBend(value, channel, timestamp) {
-  // TODO
+  controller.didPitchbend(value, channel, timestamp);
 }
 
 /**
